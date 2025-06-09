@@ -518,33 +518,30 @@
       document.addEventListener("keydown", resetInactivityTimer);
       document.addEventListener("click", resetInactivityTimer);
     
-      // INIT on page load
       document.addEventListener("DOMContentLoaded", () => {
         const user = JSON.parse(localStorage.getItem("signedInUser"));
       
         if (user && user.email && user.name) {
-          closeSignInModal(); // 🔐 Skip modal if user is cached
+          closeSignInModal(); // ✅ Resume session if cached login is valid
           updateSignedInDisplay();
-          addAdminMenuItem?.();
-          startSlotPolling?.();
         } else {
-          openSignInModal(); // Show modal only if no cached login
+          openSignInModal(); // 🔐 Force sign-in if no valid cache
         }
       
         resetInactivityTimer();
       
-        // ⌨️ Keyboard support helper
-        function bindEnterKey(inputId, callbackIdOrFunc) {
+        // ⌨️ Keyboard shortcut helper
+        function bindEnterKey(inputId, callback) {
           const input = document.getElementById(inputId);
           if (!input) return;
       
           input.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              if (typeof callbackIdOrFunc === "function") {
-                callbackIdOrFunc();
+              if (typeof callback === "function") {
+                callback();
               } else {
-                document.getElementById(callbackIdOrFunc)?.click();
+                document.getElementById(callback)?.click();
               }
             }
           });
