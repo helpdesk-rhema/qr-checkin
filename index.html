@@ -22,6 +22,7 @@
     <h2>QR Check-In</h2>
     <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
     <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
+    <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
     
     <div id="qr-reader"></div>
     <div>
@@ -307,11 +308,16 @@
         const email = document.getElementById("email").value.trim();
         const name = document.getElementById("name").value.trim();
         if (!email) return showAuthMessage("Please enter a valid email.");
-    
-        fetch(`${backendUrl}?authRequest=1&email=" + encodeURIComponent(email) + "&name=" + encodeURIComponent(name)`, { method: "GET" })
+      
+        fetch(`${backendUrl}?authRequest=1&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`, { method: "GET" })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
+              // ✅ Show name field only if the backend says to prompt for it
+              if (data.promptName) {
+                document.getElementById("nameContainer").style.display = "block";
+              }
+      
               showAuthMessage("✅ PIN sent to your email. Check inbox.");
               document.getElementById("pinSection").style.display = "block";
             } else {
@@ -326,7 +332,7 @@
         const pin = document.getElementById("pin").value.trim();
         if (!email || !pin) return showAuthMessage("Please fill all fields.");
     
-        fetch(`${backendUrl}?authVerify=1&email=" + encodeURIComponent(email) + "&pin=" + encodeURIComponent(pin)`, { method: "GET" })
+        fetch(`${backendUrl}?authVerify=1&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(pin)}`, { method: "GET" })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
@@ -344,10 +350,14 @@
       function updateSignedInDisplay() {
         const user = JSON.parse(localStorage.getItem("signedInUser"));
         const div = document.getElementById("signedInUser");
+        const signOutBtn = document.getElementById("signOutButton");
+      
         if (user && user.name) {
           div.innerText = `👤 Signed in as ${user.name}`;
+          if (signOutBtn) signOutBtn.style.display = "inline-block";
         } else {
           div.innerText = "";
+          if (signOutBtn) signOutBtn.style.display = "none";
           openSignInModal();
         }
       }
@@ -355,9 +365,33 @@
       function showAuthMessage(msg) {
         document.getElementById("authMessage").innerText = msg;
       }
+
+      function signOut() {
+        localStorage.removeItem("signedInUser");
+        document.getElementById("signedInUser").innerText = "";
+        document.getElementById("signOutButton").style.display = "none";
+        openSignInModal();
+      }
+
+      let inactivityTimeout;
+
+      function resetInactivityTimer() {
+        clearTimeout(inactivityTimeout);
+        inactivityTimeout = setTimeout(() => {
+          signOut();
+          alert("You were signed out due to inactivity.");
+        }, 5 * 60 * 1000); // 5 minutes
+      }
+
+      document.addEventListener("mousemove", resetInactivityTimer);
+      document.addEventListener("keydown", resetInactivityTimer);
+      document.addEventListener("click", resetInactivityTimer);
     
       // INIT on page load
-      document.addEventListener("DOMContentLoaded", updateSignedInDisplay);
+      document.addEventListener("DOMContentLoaded", () => {
+        updateSignedInDisplay();
+        resetInactivityTimer();
+      });
     </script>
   </body>
 </html>
