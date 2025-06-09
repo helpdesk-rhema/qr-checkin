@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
     <title>QR Check-In</title>
-    <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/html5-qrcode@2.3.10"></script>
     <style>
       body {
         font-family: sans-serif;
         text-align: center;
-        margin: 0;
         padding: 20px;
       }
-      #qr-reader {
+      #reader {
         width: 100%;
         max-width: 400px;
         margin: 0 auto;
@@ -25,25 +24,22 @@
   </head>
   <body>
     <h2>QR Scanner</h2>
-    <div id="qr-reader"></div>
+    <div id="reader"></div>
     <div id="result">Waiting for scan...</div>
 
     <script>
-      const qrReader = new Html5Qrcode("qr-reader");
+      function onScanSuccess(decodedText, decodedResult) {
+        document.getElementById("result").innerText = "✅ Scanned: " + decodedText;
+        html5QrcodeScanner.clear();
+      }
 
-      qrReader.start(
-        { facingMode: "environment" },
+      const html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader",
         { fps: 10, qrbox: 250 },
-        (decodedText, decodedResult) => {
-          document.getElementById("result").innerText = "✅ Scanned: " + decodedText;
-          qrReader.stop();
-        },
-        (errorMessage) => {
-          // handle scan errors silently
-        }
-      ).catch(err => {
-        document.getElementById("result").innerText = "❌ Error: " + err;
-      });
+        false
+      );
+
+      html5QrcodeScanner.render(onScanSuccess);
     </script>
   </body>
 </html>
