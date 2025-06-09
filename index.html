@@ -38,33 +38,43 @@
     <div id="offlineBanner" class="offline" style="display: none;">🚫 Offline Mode</div>
     <div id="syncBanner" class="syncing" style="display: none;"></div>
 
-    <div id="signInModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
-      <div class="modal-box" style="background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px;">
-        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-          <h3>Admin Sign In</h3>
-          <button onclick="closeSignInModal()" style="font-size: 20px; background: none; border: none; cursor: pointer;">&times;</button>
+    <div id="signInModal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Sign In</h3>
+          <button onclick="closeSignInModal()" class="modal-close">×</button>
         </div>
         <hr style="margin: 10px 0;">
-        <form>
+        <form style="margin-bottom: 20px;">
+    
           <!-- Email input -->
           <div style="margin-bottom: 15px;">
-            <input type="email" id="email" placeholder="Enter your email address" style="width: 100%; padding:8px; font-size:16px;">
+            <input type="email" id="email" placeholder="Enter your email address"
+              style="width: calc(100% - 32px); margin: 0 8px 12px 8px; padding:8px; font-size:16px;">
           </div>
     
-          <!-- Name input (only for first time or unknown email) -->
+          <!-- Name input, hidden by default -->
           <div id="nameContainer" style="margin-bottom: 15px; display: none;">
-            <input type="text" id="name" placeholder="Enter your full name" style="width: 100%; padding:8px; font-size:16px;">
+            <input type="text" id="name" placeholder="Enter your full name"
+              style="width: calc(100% - 32px); margin: 0 8px 12px 8px; padding:8px; font-size:16px;">
           </div>
     
-          <button type="button" onclick="requestPin()" style="width: 100%; padding:10px; font-size:16px;">Send PIN</button>
+          <!-- Step 1: Email check -->
+          <button type="button" id="emailCheckBtn" class="pin-button" onclick="checkEmailAndProceed()">Continue</button>
+    
+          <!-- Step 2 (new users only): continue to PIN -->
+          <button id="toPinButton" type="button" class="pin-button" style="display: none;" onclick="showPinSection()">Continue to PIN</button>
     
           <!-- PIN Entry Section -->
           <div id="pinSection" style="display:none; margin-top:20px;">
-            <input type="text" id="pin" placeholder="Enter the PIN" style="width: 100%; padding:8px; font-size:16px;">
-            <button type="button" onclick="submitPin()" style="margin-top: 10px; width: 100%; padding:10px; font-size:16px;">Submit PIN</button>
+            <input type="text" id="pin" placeholder="Enter the PIN"
+              style="width: calc(100% - 32px); margin: 0 8px 12px 8px; padding:8px; font-size:16px;">
+            <button type="button" class="pin-button" onclick="submitPin()">Submit PIN</button>
           </div>
         </form>
-        <div id="authMessage" style="margin-top: 15px; font-size: 14px; text-align: center;"></div>
+    
+        <!-- Status message area -->
+        <div id="authMessage" class="authMessage" style="font-size: 14px;"></div>
       </div>
     </div>
 
@@ -304,27 +314,56 @@
         document.getElementById("signInModal").style.display = "none";
       }
     
-      function requestPin() {
-        const email = document.getElementById("email").value.trim();
-        const name = document.getElementById("name").value.trim();
-        if (!email) return showAuthMessage("Please enter a valid email.");
+      function checkEmailAndProceed() {
+        const emailInput = document.getElementById("email");
+        const nameInput = document.getElementById("name");
+        const email = emailInput.value.trim().toLowerCase();
+        if (!email) return showAuthMessage("Please enter your email address.");
       
-        fetch(`${backendUrl}?authRequest=1&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}`, { method: "GET" })
+        fetch(`${backendUrl}?authCheck=1&email=${encodeURIComponent(email)}`)
+          .then(res => res.json())
+          .then(data => {
+            emailInput.disabled = true;
+            document.getElementById("nameContainer").style.display = "block";
+            document.getElementById("emailCheckBtn").style.display = "none";
+      
+            if (data.exists) {
+              nameInput.value = data.name || "";
+              nameInput.disabled = true;
+              sendPinAndShowMessage(data.name, email);
+            } else {
+              nameInput.value = "";
+              nameInput.disabled = false;
+              document.getElementById("toPinButton").style.display = "block";
+            }
+          })
+          .catch(() => showAuthMessage("❌ Network error. Try again."));
+      }
+      
+      function sendPinAndShowMessage(name, email) {
+        showAuthMessage("Sending PIN...");
+        fetch(`${backendUrl}?authRequest=1&email=${encodeURIComponent(email)}&name=${encodeURIComponent(name || '')}`)
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              // ✅ Show name field only if the backend says to prompt for it
-              if (data.promptName) {
-                document.getElementById("nameContainer").style.display = "block";
-              }
-      
-              showAuthMessage("✅ PIN sent to your email. Check inbox.");
               document.getElementById("pinSection").style.display = "block";
+              showAuthMessage("✅ " + data.message);
             } else {
               showAuthMessage("❌ " + data.message);
             }
           })
           .catch(() => showAuthMessage("❌ Network error. Try again."));
+      }
+      
+      function showPinSection() {
+        const nameInput = document.getElementById("name");
+        const emailInput = document.getElementById("email");
+        const name = nameInput.value.trim();
+        const email = emailInput.value.trim().toLowerCase();
+        if (!name || !email) return showAuthMessage("Please enter your full name and email.");
+      
+        document.getElementById("toPinButton").style.display = "none";
+        sendPinAndShowMessage(name, email);
       }
     
       function submitPin() {
