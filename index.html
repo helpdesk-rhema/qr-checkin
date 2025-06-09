@@ -326,29 +326,40 @@
       });
 
      function refreshCameraList() {
-        Html5Qrcode.getCameras().then(devices => {
-          availableCameras = devices;
-      
-          if (devices.length === 0) {
-            document.getElementById("result").innerText = "❌ No camera found.";
-            return;
-          }
-      
-          populateCameraDropdown();
-      
-          const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
-          currentCameraId = backCamera.id;
-      
-          try {
-            qrReader.stop().catch(() => {}).finally(() => {
-              startScanner(backCamera.id);
-            });
-          } catch (err) {
-            // If scanner not running, just start it
-            startScanner(backCamera.id);
-          }
-        });
-      }
+      Html5Qrcode.getCameras().then(devices => {
+        availableCameras = devices;
+    
+        if (devices.length === 0) {
+          document.getElementById("result").innerText = "❌ No camera found.";
+          return;
+        }
+    
+        populateCameraDropdown();
+    
+        const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+        currentCameraId = backCamera.id;
+    
+        qrReader.stop()
+          .catch(() => {}) // Ignore if not running
+          .finally(() => {
+            setTimeout(() => {
+              qrReader.start(
+                backCamera.id,
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                  document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
+                  qrReader.stop().catch(() => {}).finally(() => {
+                    processScan(decodedText.trim());
+                  });
+                },
+                (err) => {} // Silent errors
+              ).catch(err => {
+                console.error("Start scanner failed", err);
+              });
+            }, 200); // Slight delay ensures clean transition
+          });
+      });
+    }
 
       function submitManualCode() {
         const input = document.getElementById("manualCodeInput");
