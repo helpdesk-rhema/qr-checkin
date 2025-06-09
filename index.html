@@ -16,15 +16,16 @@
       input, select, textarea, button {
         font-size: 16px;
       }
-      /* Hide scanner content initially */
+      
       #mainContent {
-        display: none;
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.2s ease;
       }
       
-      /* Optional: Blur background while modal is active */
-      body.modal-active #mainContent {
-        filter: blur(3px);
-        pointer-events: none;
+     body.scanner-active #mainContent {
+        visibility: visible;
+        opacity: 1;
       }
       .modal-box {
         width: 90%;
@@ -38,7 +39,7 @@
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-42</h2>
+      <h2>QR Check-In-43</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
@@ -361,13 +362,6 @@
       });
     }
 
-      let cameraInitialized = false;
-
-      function initCameraOnce() {
-        if (cameraInitialized) return;
-        cameraInitialized = true;
-        refreshCameraList(); // this will call startScanner()
-      }
 
       function submitManualCode() {
         const input = document.getElementById("manualCodeInput");
@@ -386,22 +380,20 @@
 
      function openSignInModal() {
         document.getElementById("signInModal").style.display = "flex";
-        document.body.classList.add("modal-active");
-        document.getElementById("mainContent").style.display = "none"; // Ensure hidden
-      
+        document.body.classList.remove("scanner-active"); // Hide scanner visually
         setTimeout(() => {
           document.getElementById("email")?.focus();
-        }, 100); // wait for modal to render
+        }, 100);
       }
 
       function closeSignInModal() {
         document.getElementById("signInModal").style.display = "none";
-        document.body.classList.remove("modal-active");
-        document.getElementById("mainContent").style.display = "block"; // Now show scanner
-
-        setTimeout(() => {
-          initCameraOnce();
-        }, 500);
+        document.body.classList.add("scanner-active"); // Reveal scanner
+      
+        // Only initialize scanner if not already done
+        if (!qrReader._isScanning) {
+          refreshCameraList();
+        }
       }
 
       function showAuthMessage(msg) {
@@ -481,8 +473,6 @@
               
               closeSignInModal();
               updateSignedInDisplay();
-              
-              //initCameraOnce(); // ✅ Only load camera if not already done
               
             } else {
               showAuthMessage("❌ " + data.message);
