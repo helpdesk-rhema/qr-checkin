@@ -1,64 +1,76 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-    <title>QR Check-In Debug</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <title>QR Check-In</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 20px;
-        text-align: center;
-      }
-      #qr-reader {
-        width: 100%;
-        max-width: 400px;
-        margin: auto;
-      }
-      #result {
-        margin-top: 20px;
-        font-size: 18px;
-      }
+      body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+      #qr-reader { width: 100%; max-width: 400px; margin: auto; }
+      #result { margin-top: 20px; font-size: 16px; }
+      button { padding: 10px 20px; margin-top: 10px; font-size: 16px; }
     </style>
   </head>
   <body>
-    <h2>QR Scanner Debug</h2>
+    <h2>QR Check-In</h2>
     <div id="qr-reader"></div>
-    <div id="result">Initializing...</div>
+    <div id="result">Waiting for scan...</div>
 
     <script>
-      console.log("🔧 Starting QR scanner...");
+      const backendUrl = "https://script.google.com/macros/s/AKfycbxFuKrVvU0sjb2iif0yZC63IkGVYDJ2A--E1EeVVEoI5zKuApV8NIVX99jSFgu9sBk/exec";
 
-      const html5QrCode = new Html5Qrcode("qr-reader");
+      function lookupGuest(code) {
+        fetch(`${backendUrl}?code=${encodeURIComponent(code)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (!data.success) {
+              document.getElementById("result").innerHTML = "❌ " + data.message;
+              return;
+            }
 
-      Html5Qrcode.getCameras()
-        .then(devices => {
-          if (devices && devices.length) {
-            const cameraId = devices[0].id;
-            console.log("📸 Using camera:", cameraId);
+            if (data.checkedIn) {
+              document.getElementById("result").innerHTML =
+                `✅ <strong>${data.name}</strong> already checked in<br>${data.timestamp || ""}`;
+            } else {
+              document.getElementById("result").innerHTML =
+                `👤 <strong>${data.name}</strong><br><button onclick="checkIn('${code}')">✅ Mark as Checked In</button>`;
+            }
+          });
+      }
 
-            html5QrCode.start(
-              cameraId,
-              { fps: 10, qrbox: 250 },
-              decodedText => {
-                console.log("✅ QR Code scanned:", decodedText);
-                document.getElementById("result").innerText = "✅ " + decodedText;
-                html5QrCode.stop();
-              },
-              errorMessage => {
-                console.warn("Scan error:", errorMessage);
-              }
-            );
-          } else {
-            console.warn("❌ No cameras found.");
-            document.getElementById("result").innerText = "❌ No cameras found.";
-          }
-        })
-        .catch(err => {
-          console.error("❌ Error fetching cameras:", err);
-          document.getElementById("result").innerText = "❌ Error: " + err;
-        });
+      function checkIn(code) {
+        fetch(`${backendUrl}?code=${encodeURIComponent(code)}&action=checkin`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              document.getElementById("result").innerHTML = `✅ <strong>${data.name}</strong> checked in successfully.`;
+            } else {
+              document.getElementById("result").innerHTML = "❌ " + data.message;
+            }
+          });
+      }
+
+      const qrReader = new Html5Qrcode("qr-reader");
+
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices.length === 0) {
+          document.getElementById("result").innerText = "❌ No camera found.";
+          return;
+        }
+
+        const cameraId = devices[0].id;
+        qrReader.start(
+          cameraId,
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
+            qrReader.stop();
+            lookupGuest(decodedText.trim());
+          },
+          (err) => {}
+        );
+      });
     </script>
   </body>
 </html>
