@@ -38,14 +38,17 @@
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-5</h2>
+      <h2>QR Check-In-6</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
       
       <div id="qr-reader"></div>
-      <div>
+      <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
         <select id="cameraSelect" onchange="switchCamera()"></select>
+        <button onclick="refreshCameraList()" style="margin-left: 8px; padding: 6px 12px; font-size: 14px;">
+          Refresh Camera List
+        </button>
       </div>
       <div style="margin-top: 20px;">
         <input type="text" id="manualCodeInput" placeholder="Enter code manually (e.g. JOH-12345)" 
@@ -324,6 +327,26 @@
         startScanner(backCamera.id);
       });
 
+     function refreshCameraList() {
+        Html5Qrcode.getCameras().then(devices => {
+          availableCameras = devices;
+      
+          if (devices.length === 0) {
+            document.getElementById("result").innerText = "❌ No camera found.";
+            return;
+          }
+      
+          populateCameraDropdown();
+      
+          const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+          currentCameraId = backCamera.id;
+      
+          qrReader.stop().catch(() => {}).finally(() => {
+            startScanner(backCamera.id);
+          });
+        });
+      }
+
       function submitManualCode() {
         const input = document.getElementById("manualCodeInput");
         const code = input.value.trim().toUpperCase();
@@ -560,6 +583,6 @@
       });
     </script>
 
-    <script src="app.js?v=20250609-5"></script>
+    <script src="app.js?v=20250609-6"></script>
   </body>
 </html>
