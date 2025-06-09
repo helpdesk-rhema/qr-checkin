@@ -1,45 +1,64 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-    <title>QR Check-In</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://unpkg.com/html5-qrcode@2.3.10"></script>
+    <meta charset="UTF-8">
+    <title>QR Check-In Debug</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
     <style>
-      body {
-        font-family: sans-serif;
-        text-align: center;
-        padding: 20px;
-      }
-      #reader {
-        width: 100%;
-        max-width: 400px;
-        margin: 0 auto;
-      }
-      #result {
-        margin-top: 20px;
-        font-size: 18px;
-      }
+      body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+      #qr-reader { width: 100%; max-width: 400px; margin: auto; }
+      #result { margin-top: 20px; font-size: 16px; }
+      pre { text-align: left; background: #f0f0f0; padding: 10px; overflow-x: auto; }
     </style>
   </head>
   <body>
-    <h2>QR Scanner</h2>
-    <div id="reader"></div>
-    <div id="result">Waiting for scan...</div>
+    <h2>QR Scanner Debug</h2>
+    <div id="qr-reader"></div>
+    <div id="result">Initializing...</div>
+    <pre id="debugLog"></pre>
 
     <script>
-      function onScanSuccess(decodedText, decodedResult) {
-        document.getElementById("result").innerText = "✅ Scanned: " + decodedText;
-        html5QrcodeScanner.clear();
+      const debugLog = document.getElementById("debugLog");
+      function log(msg) {
+        debugLog.textContent += msg + "\n";
       }
 
-      const html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader",
-        { fps: 10, qrbox: 250 },
-        false
-      );
+      const qrRegionId = "qr-reader";
+      const html5QrCode = new Html5Qrcode(qrRegionId);
 
-      html5QrcodeScanner.render(onScanSuccess);
+      log("Attempting to start scanner...");
+
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices.length === 0) {
+          document.getElementById("result").innerText = "❌ No camera found.";
+          log("No camera found.");
+          return;
+        }
+
+        const cameraId = devices[0].id;
+        log("Using camera: " + cameraId);
+
+        html5QrCode.start(
+          cameraId,
+          { fps: 10, qrbox: 250 },
+          decodedText => {
+            document.getElementById("result").innerText = "✅ Scanned: " + decodedText;
+            log("Scanned: " + decodedText);
+            html5QrCode.stop();
+          },
+          errorMsg => {
+            log("Scan error: " + errorMsg);
+          }
+        ).catch(err => {
+          document.getElementById("result").innerText = "❌ Failed to start scanner.";
+          log("Start error: " + err);
+        });
+
+      }).catch(err => {
+        document.getElementById("result").innerText = "❌ Could not get cameras.";
+        log("Camera list error: " + err);
+      });
     </script>
   </body>
 </html>
