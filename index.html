@@ -16,27 +16,39 @@
       input, select, textarea, button {
         font-size: 16px;
       }
+      /* Hide scanner content initially */
+      #mainContent {
+        display: none;
+      }
+      
+      /* Optional: Blur background while modal is active */
+      body.modal-active #mainContent {
+        filter: blur(3px);
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
-    <h2>QR Check-In</h2>
-    <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
-    <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
-    <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
-    
-    <div id="qr-reader"></div>
-    <div>
-      <select id="cameraSelect" onchange="switchCamera()"></select>
+    <div id="mainContent">
+      <h2>QR Check-In</h2>
+      <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
+      <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
+      <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
+      
+      <div id="qr-reader"></div>
+      <div>
+        <select id="cameraSelect" onchange="switchCamera()"></select>
+      </div>
+      <div style="margin-top: 20px;">
+        <input type="text" id="manualCodeInput" placeholder="Enter code manually (e.g. JOH-12345)" 
+               style="padding: 8px; width: 250px;" />
+        <button onclick="submitManualCode()">Submit</button>
+      </div>
+      <div id="result">Waiting for scan...</div>
+      <div id="queueHistory" style="margin-top: 10px; font-size: 14px;"></div>
+      <div id="offlineBanner" class="offline" style="display: none;">🚫 Offline Mode</div>
+      <div id="syncBanner" class="syncing" style="display: none;"></div>
     </div>
-    <div style="margin-top: 20px;">
-      <input type="text" id="manualCodeInput" placeholder="Enter code manually (e.g. JOH-12345)" 
-             style="padding: 8px; width: 250px;" />
-      <button onclick="submitManualCode()">Submit</button>
-    </div>
-    <div id="result">Waiting for scan...</div>
-    <div id="queueHistory" style="margin-top: 10px; font-size: 14px;"></div>
-    <div id="offlineBanner" class="offline" style="display: none;">🚫 Offline Mode</div>
-    <div id="syncBanner" class="syncing" style="display: none;"></div>
 
     <div id="signInModal" class="modal-overlay">
       <div class="modal-box">
@@ -301,13 +313,18 @@
 
      function openSignInModal() {
         document.getElementById("signInModal").style.display = "flex";
+        document.body.classList.add("modal-active");
+        document.getElementById("mainContent").style.display = "none"; // Ensure hidden
+      
         setTimeout(() => {
           document.getElementById("email")?.focus();
-        }, 100); // small delay ensures modal is fully visible
+        }, 100); // wait for modal to render
       }
-    
+
       function closeSignInModal() {
         document.getElementById("signInModal").style.display = "none";
+        document.body.classList.remove("modal-active");
+        document.getElementById("mainContent").style.display = "block"; // Now show scanner
       }
 
       function showAuthMessage(msg) {
