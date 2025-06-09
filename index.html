@@ -26,11 +26,19 @@
         filter: blur(3px);
         pointer-events: none;
       }
+      .modal-box {
+        width: 90%;
+        max-width: 400px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin: auto;
+      }
     </style>
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-3</h2>
+      <h2>QR Check-In-4</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
@@ -307,13 +315,35 @@
 
       Html5Qrcode.getCameras().then(devices => {
         availableCameras = devices;
+      
         if (devices.length === 0) {
           document.getElementById("result").innerText = "❌ No camera found.";
           return;
         }
-        const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+      
         populateCameraDropdown();
-        startScanner(backCamera.id);
+      
+        const frontCam = devices.find(d => d.label.toLowerCase().includes("front"));
+        const backCam = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+      
+        if (frontCam && backCam && frontCam.id !== backCam.id) {
+          // Force init cycle: front → stop → back
+          qrReader.start(frontCam.id, { fps: 10, qrbox: 250 }, () => {}, () => {})
+            .then(() => qrReader.stop())
+            .then(() => {
+              currentCameraId = backCam.id;
+              startScanner(backCam.id);
+            })
+            .catch(() => {
+              // Fallback if front fails
+              currentCameraId = backCam.id;
+              startScanner(backCam.id);
+            });
+        } else {
+          // If only one camera or no labels
+          currentCameraId = backCam.id;
+          startScanner(backCam.id);
+        }
       });
 
       function submitManualCode() {
@@ -441,12 +471,9 @@
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              localStorage.setItem("signedInUser", JSON.stringify({ name: data.name, email }));
-              closeSignInModal();  // ✅ Hide modal on success
-              initScanner(); // ✅ Start scanner after successful login
+              localStorage.setItem("signedInUser", JSON.stringify({ name: data.name, email, pin })); // ✅ Store PIN
+              closeSignInModal();
               updateSignedInDisplay();
-              addAdminMenuItem?.();
-              startSlotPolling?.();
             } else {
               showAuthMessage("❌ " + data.message);
             }
@@ -472,9 +499,24 @@
         const div = document.getElementById("signedInUser");
         const signOutBtn = document.getElementById("signOutButton");
       
-        if (user && user.name) {
-          div.innerText = `👤 Signed in as ${user.name}`;
-          if (signOutBtn) signOutBtn.style.display = "inline-block";
+        if (user && user.email && user.pin) {
+          // Re-check PIN silently
+          fetch(`${backendUrl}?authVerify=1&email=${encodeURIComponent(user.email)}&pin=${encodeURIComponent(user.pin)}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                div.innerText = `👤 Signed in as ${data.name}`;
+                if (signOutBtn) signOutBtn.style.display = "inline-block";
+                closeSignInModal();
+                Html5Qrcode.getCameras().then(devices => {
+                  availableCameras = devices;
+                  populateCameraDropdown();
+                  forceCameraInitCycle();
+                });
+              } else {
+                signOut(); // invalid or expired PIN
+              }
+            });
         } else {
           div.innerText = "";
           if (signOutBtn) signOutBtn.style.display = "none";
@@ -540,6 +582,6 @@
       });
     </script>
 
-    <script src="app.js?v=20250609-3"></script>
+    <script src="app.js?v=20250609-4"></script>
   </body>
 </html>
