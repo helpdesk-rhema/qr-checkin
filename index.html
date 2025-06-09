@@ -21,6 +21,11 @@
     <div>
       <select id="cameraSelect" onchange="switchCamera()"></select>
     </div>
+    <div style="margin-top: 20px;">
+      <input type="text" id="manualCodeInput" placeholder="Enter code manually (e.g. JOH-12345)" 
+             style="padding: 8px; width: 250px;" />
+      <button onclick="submitManualCode()">Submit</button>
+    </div>
     <div id="result">Waiting for scan...</div>
     <div id="queueHistory" style="margin-top: 10px; font-size: 14px;"></div>
     <div id="offlineBanner" class="offline" style="display: none;">🚫 Offline Mode</div>
@@ -235,6 +240,21 @@
         populateCameraDropdown();
         startScanner(backCamera.id);
       });
+
+      function submitManualCode() {
+        const input = document.getElementById("manualCodeInput");
+        const code = input.value.trim().toUpperCase();
+      
+        // Optional: enforce basic format like ABC-12345
+        if (!/^[A-Z]{3}-\d{5}$/.test(code)) {
+          document.getElementById("result").innerHTML = "❌ Invalid code format.";
+          return;
+        }
+      
+        input.value = ""; // clear input
+        document.getElementById("result").innerHTML = `🔍 Entered manually: ${code}`;
+        processScan(code);
+      }
     </script>
   </body>
 </html>
