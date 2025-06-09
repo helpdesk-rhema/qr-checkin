@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Check-In</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 20px;
+      }
+      #qr-reader {
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+      #result {
+        margin-top: 20px;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>QR Scanner</h2>
+    <div id="qr-reader"></div>
+    <div id="result">Waiting for scan...</div>
+
+    <script>
+      const qrReader = new Html5Qrcode("qr-reader");
+
+      qrReader.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText, decodedResult) => {
+          document.getElementById("result").innerText = "✅ Scanned: " + decodedText;
+          qrReader.stop();
+        },
+        (errorMessage) => {
+          // handle scan errors silently
+        }
+      ).catch(err => {
+        document.getElementById("result").innerText = "❌ Error: " + err;
+      });
+    </script>
+  </body>
+</html>
