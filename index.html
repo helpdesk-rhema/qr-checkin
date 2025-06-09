@@ -32,15 +32,19 @@
       let availableCameras = [];
 
       function checkOfflineStatus() {
+        const offlineBanner = document.getElementById("offlineBanner");
         if (!navigator.onLine) {
-          document.getElementById("offlineBanner").style.display = "block";
+          offlineBanner.style.display = "block";
         } else {
-          document.getElementById("offlineBanner").style.display = "none";
-          syncOfflineQueue();
+          offlineBanner.style.display = "none";
+          syncOfflineQueue(); // attempt sync when reconnecting
         }
       }
 
-      window.addEventListener('online', checkOfflineStatus);
+      window.addEventListener('online', () => {
+        checkOfflineStatus();
+        syncOfflineQueue();
+      });
       window.addEventListener('offline', checkOfflineStatus);
       checkOfflineStatus();
 
@@ -51,7 +55,7 @@
           { fps: 10, qrbox: 250 },
           (decodedText) => {
             document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
-            qrReader.stop().then(() => {
+            qrReader.stop().catch(() => {}).finally(() => {
               processScan(decodedText.trim());
             });
           },
@@ -73,7 +77,7 @@
 
       function switchCamera() {
         const selectedId = document.getElementById("cameraSelect").value;
-        qrReader.stop().then(() => {
+        qrReader.stop().catch(() => {}).finally(() => {
           startScanner(selectedId);
         });
       }
@@ -126,7 +130,7 @@
       function restartScanner() {
         setTimeout(() => {
           startScanner(currentCameraId);
-        }, 2500);
+        }, 2000);
       }
 
       // ✅ Offline queue logic
@@ -142,7 +146,8 @@
         const queue = getOfflineQueue();
         queue.push({ code, timestamp: new Date().toISOString() });
         saveOfflineQueue(queue);
-        document.getElementById("result").innerHTML = `📴 Offline. Queued: ${code}`;
+        const count = queue.length;
+        document.getElementById("result").innerHTML = `📴 Offline. Queued: ${code} (${count} total)`;
         restartScanner();
       }
 
@@ -152,26 +157,32 @@
 
         const syncBanner = document.getElementById("syncBanner");
         syncBanner.style.display = "block";
-        syncBanner.innerText = `🔁 Syncing ${queue.length} pending check-in(s)...`;
+        syncBanner.innerText = `🔁 Syncing ${queue.length} check-in(s)...`;
 
         const updatedQueue = [];
+        let completed = 0;
 
-        queue.forEach(entry => {
+        queue.forEach((entry, index) => {
           fetch(`${backendUrl}?code=${encodeURIComponent(entry.code)}&action=checkin`)
             .then(res => res.json())
             .then(data => {
               if (!data.success) {
-                updatedQueue.push(entry); // keep in queue if failed
+                updatedQueue.push(entry); // keep in queue
               }
               syncBanner.innerText = `✅ Synced: ${entry.code}`;
-              setTimeout(() => syncBanner.style.display = "none", 3000);
             })
             .catch(() => {
-              updatedQueue.push(entry); // keep if network failed
+              updatedQueue.push(entry);
               syncBanner.innerText = `❌ Failed to sync: ${entry.code}`;
             })
             .finally(() => {
-              saveOfflineQueue(updatedQueue);
+              completed++;
+              if (completed === queue.length) {
+                saveOfflineQueue(updatedQueue);
+                setTimeout(() => {
+                  syncBanner.style.display = "none";
+                }, 3000);
+              }
             });
         });
       }
