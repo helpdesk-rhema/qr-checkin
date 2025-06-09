@@ -154,14 +154,14 @@
       function syncOfflineQueue() {
         const queue = getOfflineQueue();
         if (queue.length === 0) return;
-
+      
         const syncBanner = document.getElementById("syncBanner");
         syncBanner.style.display = "block";
         syncBanner.innerText = `🔁 Syncing ${queue.length} check-in(s)...`;
-
+      
         const updatedQueue = [];
         let completed = 0;
-
+      
         queue.forEach((entry, index) => {
           fetch(`${backendUrl}?code=${encodeURIComponent(entry.code)}&action=checkin`)
             .then(res => res.json())
@@ -181,6 +181,12 @@
                 saveOfflineQueue(updatedQueue);
                 setTimeout(() => {
                   syncBanner.style.display = "none";
+      
+                  // ✅ Clear stale offline message if no queue remains
+                  if (updatedQueue.length === 0) {
+                    document.getElementById("result").innerText = "✅ All pending check-ins synced.";
+                    restartScanner(); // re-ready scanner with clean state
+                  }
                 }, 3000);
               }
             });
