@@ -374,7 +374,8 @@
         document.getElementById("signInModal").style.display = "none";
         document.body.classList.remove("modal-active");
         document.getElementById("mainContent").style.display = "block"; // Now show scanner
-  
+
+        refreshCameraList(); // 📷 Ensure camera loads after sign-in
       }
 
       function showAuthMessage(msg) {
@@ -450,17 +451,36 @@
           .then(data => {
             if (data.success) {
               localStorage.setItem("signedInUser", JSON.stringify({ name: data.name, email, pin })); // ✅ Store PIN
+              localStorage.setItem("pinTimestamp", Date.now().toString());
+              
               closeSignInModal();
               updateSignedInDisplay();
+              refreshCameraList?.(); // ✅ Load scanner right away
             } else {
               showAuthMessage("❌ " + data.message);
             }
           })
           .catch(() => showAuthMessage("❌ Network error. Try again."));
       }
+
+      function getSignedInUser() {
+        const user = JSON.parse(localStorage.getItem("signedInUser"));
+        const pinTimestamp = localStorage.getItem("pinTimestamp");
+      
+        if (!user || !user.email || !user.name || !pinTimestamp) return null;
+      
+        const elapsedMinutes = (Date.now() - parseInt(pinTimestamp)) / 60000;
+        if (elapsedMinutes > 10) {
+          localStorage.removeItem("signedInUser");
+          localStorage.removeItem("pinTimestamp");
+          return null;
+        }
+      
+        return user;
+      }
     
       function updateSignedInDisplay() {
-        const user = JSON.parse(localStorage.getItem("signedInUser"));
+        const user = getSignedInUser();
         const div = document.getElementById("signedInUser");
         const signOutBtn = document.getElementById("signOutButton");
       
@@ -488,6 +508,8 @@
       }
 
       function signOut() {
+        if (!confirm("Are you sure you want to sign out?")) return;
+      
         localStorage.removeItem("signedInUser");
         document.getElementById("signedInUser").innerText = "";
         document.getElementById("signOutButton").style.display = "none";
@@ -519,13 +541,16 @@
       document.addEventListener("click", resetInactivityTimer);
     
       document.addEventListener("DOMContentLoaded", () => {
-        const user = JSON.parse(localStorage.getItem("signedInUser"));
+        const user = getSignedInUser();
       
-        if (user && user.email && user.name) {
-          closeSignInModal(); // ✅ Resume session if cached login is valid
+        if (user && user.email && user.name && !isExpired) {
+          closeSignInModal(); // 🔐 Skip modal if user is cached and PIN is valid
           updateSignedInDisplay();
+          refreshCameraList(); // ✅ Immediately load camera
         } else {
-          openSignInModal(); // 🔐 Force sign-in if no valid cache
+          localStorage.removeItem("signedInUser");
+          localStorage.removeItem("pinTimestamp");
+          openSignInModal(); // Show modal if no login or expired PIN
         }
       
         resetInactivityTimer();
