@@ -147,7 +147,11 @@
         const queue = getOfflineQueue();
       
         // 🔒 Prevent duplicate entries
-        if (queue.some(entry => entry.code === code)) return;
+        if (queue.some(entry => entry.code === code)) {
+          document.getElementById("result").innerHTML = `⚠️ Already queued: ${code}`;
+          restartScanner();
+          return;
+        }
       
         queue.push({ code, timestamp: new Date().toISOString() });
         saveOfflineQueue(queue);
@@ -177,7 +181,10 @@
         const queue = getOfflineQueue();
         if (queue.length === 0) return;
       
-        if (!confirm(`Sync ${queue.length} queued check-in(s) now?`)) return;
+        if (!confirm(`Sync ${queue.length} queued check-in(s) now?`)) {
+          restartScanner(); // Re-arm the scanner
+          return;
+        }
       
         const syncBanner = document.getElementById("syncBanner");
         syncBanner.style.display = "block";
