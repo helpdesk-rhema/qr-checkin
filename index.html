@@ -401,6 +401,7 @@
             if (data.success) {
               localStorage.setItem("signedInUser", JSON.stringify({ name: data.name, email }));
               closeSignInModal();  // ✅ Hide modal on success
+              initScanner(); // ✅ Start scanner after successful login
               updateSignedInDisplay();
               addAdminMenuItem?.();
               startSlotPolling?.();
@@ -409,6 +410,19 @@
             }
           })
           .catch(() => showAuthMessage("❌ Network error. Try again."));
+      }
+
+      function initScanner() {
+        Html5Qrcode.getCameras().then(devices => {
+          availableCameras = devices;
+          if (devices.length === 0) {
+            document.getElementById("result").innerText = "❌ No camera found.";
+            return;
+          }
+          const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+          populateCameraDropdown();
+          startScanner(backCamera.id);
+        });
       }
     
       function updateSignedInDisplay() {
