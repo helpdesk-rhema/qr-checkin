@@ -1,64 +1,64 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>QR Check-In Debug</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-      body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-      #qr-reader { width: 100%; max-width: 400px; margin: auto; }
-      #result { margin-top: 20px; font-size: 16px; }
-      pre { text-align: left; background: #f0f0f0; padding: 10px; overflow-x: auto; }
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        text-align: center;
+      }
+      #qr-reader {
+        width: 100%;
+        max-width: 400px;
+        margin: auto;
+      }
+      #result {
+        margin-top: 20px;
+        font-size: 18px;
+      }
     </style>
   </head>
   <body>
     <h2>QR Scanner Debug</h2>
     <div id="qr-reader"></div>
     <div id="result">Initializing...</div>
-    <pre id="debugLog"></pre>
 
     <script>
-      const debugLog = document.getElementById("debugLog");
-      function log(msg) {
-        debugLog.textContent += msg + "\n";
-      }
+      console.log("🔧 Starting QR scanner...");
 
-      const qrRegionId = "qr-reader";
-      const html5QrCode = new Html5Qrcode(qrRegionId);
+      const html5QrCode = new Html5Qrcode("qr-reader");
 
-      log("Attempting to start scanner...");
+      Html5Qrcode.getCameras()
+        .then(devices => {
+          if (devices && devices.length) {
+            const cameraId = devices[0].id;
+            console.log("📸 Using camera:", cameraId);
 
-      Html5Qrcode.getCameras().then(devices => {
-        if (devices.length === 0) {
-          document.getElementById("result").innerText = "❌ No camera found.";
-          log("No camera found.");
-          return;
-        }
-
-        const cameraId = devices[0].id;
-        log("Using camera: " + cameraId);
-
-        html5QrCode.start(
-          cameraId,
-          { fps: 10, qrbox: 250 },
-          decodedText => {
-            document.getElementById("result").innerText = "✅ Scanned: " + decodedText;
-            log("Scanned: " + decodedText);
-            html5QrCode.stop();
-          },
-          errorMsg => {
-            log("Scan error: " + errorMsg);
+            html5QrCode.start(
+              cameraId,
+              { fps: 10, qrbox: 250 },
+              decodedText => {
+                console.log("✅ QR Code scanned:", decodedText);
+                document.getElementById("result").innerText = "✅ " + decodedText;
+                html5QrCode.stop();
+              },
+              errorMessage => {
+                console.warn("Scan error:", errorMessage);
+              }
+            );
+          } else {
+            console.warn("❌ No cameras found.");
+            document.getElementById("result").innerText = "❌ No cameras found.";
           }
-        ).catch(err => {
-          document.getElementById("result").innerText = "❌ Failed to start scanner.";
-          log("Start error: " + err);
+        })
+        .catch(err => {
+          console.error("❌ Error fetching cameras:", err);
+          document.getElementById("result").innerText = "❌ Error: " + err;
         });
-
-      }).catch(err => {
-        document.getElementById("result").innerText = "❌ Could not get cameras.";
-        log("Camera list error: " + err);
-      });
     </script>
   </body>
 </html>
