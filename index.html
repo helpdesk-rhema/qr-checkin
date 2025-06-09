@@ -38,7 +38,7 @@
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-38</h2>
+      <h2>QR Check-In-39</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
@@ -390,8 +390,6 @@
         document.getElementById("signInModal").style.display = "none";
         document.body.classList.remove("modal-active");
         document.getElementById("mainContent").style.display = "block"; // Now show scanner
-
-        //refreshCameraList(); // 📷 Ensure camera loads after sign-in
       }
 
       function showAuthMessage(msg) {
@@ -471,7 +469,7 @@
               
               closeSignInModal();
               updateSignedInDisplay();
-              //refreshCameraList?.(); // ✅ Load scanner right away
+              refreshCameraList?.(); // ✅ Load scanner right away
             } else {
               showAuthMessage("❌ " + data.message);
             }
@@ -555,6 +553,8 @@
       document.addEventListener("mousemove", resetInactivityTimer);
       document.addEventListener("keydown", resetInactivityTimer);
       document.addEventListener("click", resetInactivityTimer);
+
+      
     
       document.addEventListener("DOMContentLoaded", () => {
         const user = getSignedInUser();
@@ -567,7 +567,6 @@
         if (user && user.email && user.name && !isExpired) {
           closeSignInModal(); // 🔐 Skip modal if user is cached and PIN is valid
           updateSignedInDisplay();
-          //refreshCameraList(); // ✅ Immediately load camera
         } else {
           localStorage.removeItem("signedInUser");
           localStorage.removeItem("pinTimestamp");
