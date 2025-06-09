@@ -20,6 +20,9 @@
   </head>
   <body>
     <h2>QR Check-In</h2>
+    <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
+    <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
+    
     <div id="qr-reader"></div>
     <div>
       <select id="cameraSelect" onchange="switchCamera()"></select>
@@ -33,6 +36,39 @@
     <div id="queueHistory" style="margin-top: 10px; font-size: 14px;"></div>
     <div id="offlineBanner" class="offline" style="display: none;">🚫 Offline Mode</div>
     <div id="syncBanner" class="syncing" style="display: none;"></div>
+
+    <div id="signInModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+      <div class="modal-box" style="background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h3>Admin Sign In</h3>
+          <button onclick="closeSignInModal()" style="font-size: 20px; background: none; border: none; cursor: pointer;">&times;</button>
+        </div>
+        <hr style="margin: 10px 0;">
+        <form>
+          <!-- Email input -->
+          <div style="margin-bottom: 15px;">
+            <input type="email" id="email" placeholder="Enter your email address" style="width: 100%; padding:8px; font-size:16px;">
+          </div>
+    
+          <!-- Name input (only for first time or unknown email) -->
+          <div id="nameContainer" style="margin-bottom: 15px; display: none;">
+            <input type="text" id="name" placeholder="Enter your full name" style="width: 100%; padding:8px; font-size:16px;">
+          </div>
+    
+          <button type="button" onclick="requestPin()" style="width: 100%; padding:10px; font-size:16px;">Send PIN</button>
+    
+          <!-- PIN Entry Section -->
+          <div id="pinSection" style="display:none; margin-top:20px;">
+            <input type="text" id="pin" placeholder="Enter the PIN" style="width: 100%; padding:8px; font-size:16px;">
+            <button type="button" onclick="submitPin()" style="margin-top: 10px; width: 100%; padding:10px; font-size:16px;">Submit PIN</button>
+          </div>
+        </form>
+        <div id="authMessage" style="margin-top: 15px; font-size: 14px; text-align: center;"></div>
+      </div>
+    </div>
+
+    
+
 
     <script>
       const backendUrl = "https://script.google.com/macros/s/AKfycbxFuKrVvU0sjb2iif0yZC63IkGVYDJ2A--E1EeVVEoI5zKuApV8NIVX99jSFgu9sBk/exec";
@@ -258,6 +294,70 @@
         document.getElementById("result").innerHTML = `🔍 Entered manually: ${code}`;
         processScan(code);
       }
+
+      function openSignInModal() {
+        document.getElementById("signInModal").style.display = "flex";
+      }
+    
+      function closeSignInModal() {
+        document.getElementById("signInModal").style.display = "none";
+      }
+    
+      function requestPin() {
+        const email = document.getElementById("email").value.trim();
+        const name = document.getElementById("name").value.trim();
+        if (!email) return showAuthMessage("Please enter a valid email.");
+    
+        fetch(`${backendUrl}?authRequest=1&email=" + encodeURIComponent(email) + "&name=" + encodeURIComponent(name)`, { method: "GET" })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              showAuthMessage("✅ PIN sent to your email. Check inbox.");
+              document.getElementById("pinSection").style.display = "block";
+            } else {
+              showAuthMessage("❌ " + data.message);
+            }
+          })
+          .catch(() => showAuthMessage("❌ Network error. Try again."));
+      }
+    
+      function submitPin() {
+        const email = document.getElementById("email").value.trim();
+        const pin = document.getElementById("pin").value.trim();
+        if (!email || !pin) return showAuthMessage("Please fill all fields.");
+    
+        fetch(`${backendUrl}?authVerify=1&email=" + encodeURIComponent(email) + "&pin=" + encodeURIComponent(pin)`, { method: "GET" })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              const user = { email: data.email, name: data.name };
+              localStorage.setItem("signedInUser", JSON.stringify(user));
+              closeSignInModal();
+              updateSignedInDisplay();
+            } else {
+              showAuthMessage("❌ " + data.message);
+            }
+          })
+          .catch(() => showAuthMessage("❌ Could not verify. Try again."));
+      }
+    
+      function updateSignedInDisplay() {
+        const user = JSON.parse(localStorage.getItem("signedInUser"));
+        const div = document.getElementById("signedInUser");
+        if (user && user.name) {
+          div.innerText = `👤 Signed in as ${user.name}`;
+        } else {
+          div.innerText = "";
+          openSignInModal();
+        }
+      }
+    
+      function showAuthMessage(msg) {
+        document.getElementById("authMessage").innerText = msg;
+      }
+    
+      // INIT on page load
+      document.addEventListener("DOMContentLoaded", updateSignedInDisplay);
     </script>
   </body>
 </html>
