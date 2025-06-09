@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>QR Check-In-1</title>
+    <title>QR Check-In</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -30,7 +30,7 @@
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In</h2>
+      <h2>QR Check-In-2</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
@@ -53,8 +53,8 @@
     <div id="signInModal" class="modal-overlay">
       <div class="modal-box">
         <div class="modal-header">
-          <h3>Admin Sign In</h3>
-          <button onclick="closeSignInModal()" class="modal-close">×</button>
+          <h3>Sign In</h3>
+          <!--<button onclick="closeSignInModal()" class="modal-close">×</button>-->
         </div>
         <hr style="margin: 10px 0;">
         <form style="margin-bottom: 20px;">
@@ -120,8 +120,28 @@
               processScan(decodedText.trim());
             });
           },
-          (err) => {} // Silent scan errors
-        );
+          (err) => {
+            // Silent scan errors
+          }
+        ).catch((err) => {
+          console.warn("Initial scanner start failed, retrying...", err);
+          // Retry once after 1 second
+          setTimeout(() => {
+            qrReader.start(
+              cameraId,
+              { fps: 10, qrbox: 250 },
+              (decodedText) => {
+                document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
+                qrReader.stop().catch(() => {}).finally(() => {
+                  processScan(decodedText.trim());
+                });
+              },
+              (err) => {
+                console.error("Retry scanner start failed", err);
+              }
+            );
+          }, 1000);
+        });
       }
 
       function populateCameraDropdown() {
@@ -444,6 +464,15 @@
         localStorage.removeItem("signedInUser");
         document.getElementById("signedInUser").innerText = "";
         document.getElementById("signOutButton").style.display = "none";
+      
+        // Reset sign-in modal fields
+        document.getElementById("email").value = "";
+        document.getElementById("pin").value = "";
+        document.getElementById("email").disabled = false;
+        document.getElementById("emailCheckBtn").style.display = "block";
+        document.getElementById("pinSection").style.display = "none";
+        showAuthMessage("");
+      
         openSignInModal();
       }
 
