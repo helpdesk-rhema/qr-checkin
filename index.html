@@ -38,7 +38,7 @@
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-8</h2>
+      <h2>QR Check-In-9</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
@@ -124,7 +124,8 @@
 
       function startScanner(cameraId) {
         currentCameraId = cameraId;
-        cameraLoaded = false; // Reset flag before trying
+        const btn = document.getElementById("refreshCameraBtn");
+        if (btn) btn.textContent = "Loading...";
       
         qrReader.start(
           cameraId,
@@ -136,37 +137,21 @@
             });
           },
           (err) => {
-            // Silent scan errors
+            // Silent errors during scan attempts
           }
         ).then(() => {
-          cameraLoaded = true;
-          updateCameraButtonLabel();
-        }).catch((err) => {
-          console.warn("Initial scanner start failed, retrying...", err);
-          
-          // Retry once
+          // Give camera time to load
           setTimeout(() => {
-            qrReader.start(
-              cameraId,
-              { fps: 10, qrbox: 250 },
-              (decodedText) => {
-                document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
-                qrReader.stop().catch(() => {}).finally(() => {
-                  processScan(decodedText.trim());
-                });
-              },
-              (err) => {
-                // Silent
-              }
-            ).then(() => {
-              cameraLoaded = true;
-              updateCameraButtonLabel();
-            }).catch((retryErr) => {
-              console.error("Retry scanner start failed", retryErr);
-              cameraLoaded = false;
-              updateCameraButtonLabel();
-            });
-          }, 1000);
+            const videoEl = document.querySelector("#qr-reader video");
+            const isPlaying = videoEl && videoEl.readyState >= 2;
+      
+            if (btn) {
+              btn.textContent = isPlaying ? "Refresh Camera" : "Load Camera";
+            }
+          }, 3000); // wait 3s after start
+        }).catch((err) => {
+          console.warn("Camera failed to start", err);
+          if (btn) btn.textContent = "Load Camera";
         });
       }
 
@@ -572,6 +557,6 @@
       });
     </script>
 
-    <script src="app.js?v=20250609-8"></script>
+    <script src="app.js?v=20250609-9"></script>
   </body>
 </html>
