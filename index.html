@@ -1,37 +1,99 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>QR Check-In</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
       body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
       #qr-reader { width: 100%; max-width: 400px; margin: auto; }
       #result { margin-top: 20px; font-size: 16px; }
       button { padding: 10px 20px; margin-top: 10px; font-size: 16px; }
+      select { margin-top: 10px; padding: 6px; }
+      .offline { color: red; font-weight: bold; margin-top: 10px; }
     </style>
   </head>
   <body>
     <h2>QR Check-In</h2>
     <div id="qr-reader"></div>
+    <div>
+      <select id="cameraSelect" onchange="switchCamera()"></select>
+    </div>
     <div id="result">Waiting for scan...</div>
+    <div id="offlineBanner" class="offline" style="display: none;">🚫 Offline Mode</div>
 
     <script>
-      const backendUrl = "https://script.google.com/macros/s/AKfycbxFuKrVvU0sjb2iif0yZC63IkGVYDJ2A--E1EeVVEoI5zKuApV8NIVX99jSFgu9sBk/exec";
+      const backendUrl = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+      const qrReader = new Html5Qrcode("qr-reader");
+      let currentCameraId = null;
+      let availableCameras = [];
+
+      // Show offline banner if not connected
+      function checkOfflineStatus() {
+        if (!navigator.onLine) {
+          document.getElementById("offlineBanner").style.display = "block";
+        } else {
+          document.getElementById("offlineBanner").style.display = "none";
+        }
+      }
+      window.addEventListener('online', checkOfflineStatus);
+      window.addEventListener('offline', checkOfflineStatus);
+      checkOfflineStatus();
+
+      function startScanner(cameraId) {
+        currentCameraId = cameraId;
+        qrReader.start(
+          cameraId,
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
+            qrReader.stop().then(() => {
+              lookupGuest(decodedText.trim());
+            });
+          },
+          (err) => {} // Silent scan errors
+        );
+      }
+
+      function populateCameraDropdown() {
+        const select = document.getElementById("cameraSelect");
+        select.innerHTML = "";
+        availableCameras.forEach((cam, index) => {
+          const option = document.createElement("option");
+          option.value = cam.id;
+          option.text = cam.label || `Camera ${index + 1}`;
+          if (cam.id === currentCameraId) option.selected = true;
+          select.appendChild(option);
+        });
+      }
+
+      function switchCamera() {
+        const selectedId = document.getElementById("cameraSelect").value;
+        qrReader.stop().then(() => {
+          startScanner(selectedId);
+        });
+      }
 
       function lookupGuest(code) {
+        if (!navigator.onLine) {
+          document.getElementById("result").innerHTML = `📴 Offline. Scanned: ${code}`;
+          return;
+        }
+
         fetch(`${backendUrl}?code=${encodeURIComponent(code)}`)
           .then(res => res.json())
           .then(data => {
             if (!data.success) {
               document.getElementById("result").innerHTML = "❌ " + data.message;
+              restartScanner();
               return;
             }
 
             if (data.checkedIn) {
               document.getElementById("result").innerHTML =
                 `✅ <strong>${data.name}</strong> already checked in<br>${data.timestamp || ""}`;
+              restartScanner();
             } else {
               document.getElementById("result").innerHTML =
                 `👤 <strong>${data.name}</strong><br><button onclick="checkIn('${code}')">✅ Mark as Checked In</button>`;
@@ -44,32 +106,32 @@
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              document.getElementById("result").innerHTML = `✅ <strong>${data.name}</strong> checked in successfully.`;
+              document.getElementById("result").innerHTML =
+                `✅ <strong>${data.name}</strong> checked in successfully.`;
+              restartScanner();
             } else {
               document.getElementById("result").innerHTML = "❌ " + data.message;
+              restartScanner();
             }
           });
       }
 
-      const qrReader = new Html5Qrcode("qr-reader");
+      function restartScanner() {
+        setTimeout(() => {
+          startScanner(currentCameraId);
+        }, 2500); // restart scanner after 2.5s
+      }
 
+      // Initialize on load
       Html5Qrcode.getCameras().then(devices => {
+        availableCameras = devices;
         if (devices.length === 0) {
           document.getElementById("result").innerText = "❌ No camera found.";
           return;
         }
-
-        const cameraId = devices[0].id;
-        qrReader.start(
-          cameraId,
-          { fps: 10, qrbox: 250 },
-          (decodedText) => {
-            document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
-            qrReader.stop();
-            lookupGuest(decodedText.trim());
-          },
-          (err) => {}
-        );
+        const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+        populateCameraDropdown();
+        startScanner(backCamera.id);
       });
     </script>
   </body>
