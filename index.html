@@ -38,7 +38,7 @@
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-41</h2>
+      <h2>QR Check-In-42</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
@@ -398,6 +398,10 @@
         document.getElementById("signInModal").style.display = "none";
         document.body.classList.remove("modal-active");
         document.getElementById("mainContent").style.display = "block"; // Now show scanner
+
+        setTimeout(() => {
+          initCameraOnce();
+        }, 500);
       }
 
       function showAuthMessage(msg) {
@@ -478,7 +482,7 @@
               closeSignInModal();
               updateSignedInDisplay();
               
-              initCameraOnce(); // ✅ Only load camera if not already done
+              //initCameraOnce(); // ✅ Only load camera if not already done
               
             } else {
               showAuthMessage("❌ " + data.message);
