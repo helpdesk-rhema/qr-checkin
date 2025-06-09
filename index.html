@@ -16,6 +16,17 @@
       input, select, textarea, button {
         font-size: 16px;
       }
+
+      html, body {
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .modal-overlay {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       
       #mainContent {
         visibility: hidden;
@@ -28,32 +39,32 @@
         opacity: 1;
       }
 
-      #signInModal.modal-overlay {
+      #signInModal {
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
         background: rgba(0, 0, 0, 0.5);
         z-index: 1000;
+        display: block; /* Or display: none; initially */
+        overflow-y: auto;
       }
+      
       .modal-box {
         width: 90%;
         max-width: 400px;
         background: white;
         padding: 20px;
         border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        margin: 80px auto; /* Restores vertical spacing */
       }
   
     </style>
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-44</h2>
+      <h2>QR Check-In-45</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
@@ -337,7 +348,7 @@
         }
         const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
         populateCameraDropdown();
-        //startScanner(backCamera.id);
+        startScanner(backCamera.id);
       });
 
      function refreshCameraList() {
@@ -393,18 +404,18 @@
       }
 
      function openSignInModal() {
-        document.getElementById("signInModal").style.display = "flex";
-        document.body.classList.remove("scanner-active"); // Hides #mainContent via CSS
-        requestAnimationFrame(() => {
+        document.getElementById("signInModal").style.display = "block";
+        document.body.classList.remove("scanner-active");
+      
+        setTimeout(() => {
           document.getElementById("email")?.focus();
-        });
+        }, 100);
       }
 
       function closeSignInModal() {
         document.getElementById("signInModal").style.display = "none";
-        document.body.classList.add("scanner-active"); // Reveal scanner via CSS
+        document.body.classList.add("scanner-active");
       
-        // Only initialize scanner if not already running
         if (!qrReader._isScanning) {
           refreshCameraList();
         }
