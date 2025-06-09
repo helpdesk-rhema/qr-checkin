@@ -41,29 +41,17 @@
     <div id="signInModal" class="modal-overlay">
       <div class="modal-box">
         <div class="modal-header">
-          <h3>Sign In</h3>
+          <h3>Admin Sign In</h3>
           <button onclick="closeSignInModal()" class="modal-close">×</button>
         </div>
         <hr style="margin: 10px 0;">
         <form style="margin-bottom: 20px;">
-    
+          
           <!-- Email input -->
           <div style="margin-bottom: 15px;">
             <input type="email" id="email" placeholder="Enter your email address"
               style="width: calc(100% - 32px); margin: 0 8px 12px 8px; padding:8px; font-size:16px;">
           </div>
-    
-          <!-- Name input, hidden by default -->
-          <div id="nameContainer" style="margin-bottom: 15px; display: none;">
-            <input type="text" id="name" placeholder="Enter your full name"
-              style="width: calc(100% - 32px); margin: 0 8px 12px 8px; padding:8px; font-size:16px;">
-          </div>
-    
-          <!-- Step 1: Email check -->
-          <button type="button" id="emailCheckBtn" class="pin-button" onclick="checkEmailAndProceed()">Continue</button>
-    
-          <!-- Step 2 (new users only): continue to PIN -->
-          <button id="toPinButton" type="button" class="pin-button" style="display: none;" onclick="showPinSection()">Continue to PIN</button>
     
           <!-- PIN Entry Section -->
           <div id="pinSection" style="display:none; margin-top:20px;">
@@ -71,13 +59,18 @@
               style="width: calc(100% - 32px); margin: 0 8px 12px 8px; padding:8px; font-size:16px;">
             <button type="button" class="pin-button" onclick="submitPin()">Submit PIN</button>
           </div>
+    
+          <!-- Hidden name field (autofilled) -->
+          <input type="hidden" id="name">
+    
+          <!-- Continue button -->
+          <button type="button" id="emailCheckBtn" class="pin-button" onclick="checkEmailAndRequestPin()">Continue</button>
         </form>
     
         <!-- Status message area -->
         <div id="authMessage" class="authMessage" style="font-size: 14px;"></div>
       </div>
     </div>
-
     
 
 
@@ -306,35 +299,45 @@
         processScan(code);
       }
 
-      function openSignInModal() {
+     function openSignInModal() {
         document.getElementById("signInModal").style.display = "flex";
+        setTimeout(() => {
+          document.getElementById("email")?.focus();
+        }, 100); // small delay ensures modal is fully visible
       }
     
       function closeSignInModal() {
         document.getElementById("signInModal").style.display = "none";
       }
+
+      function showAuthMessage(msg) {
+        document.getElementById("authMessage").innerHTML = `<p>${msg}</p>`;
+      }
     
-      function checkEmailAndProceed() {
-        const emailInput = document.getElementById("email");
-        const nameInput = document.getElementById("name");
-        const email = emailInput.value.trim().toLowerCase();
-        if (!email) return showAuthMessage("Please enter your email address.");
+      function checkEmailAndRequestPin() {
+        const email = document.getElementById("email").value.trim().toLowerCase();
+        if (!email) return showAuthMessage("Please enter your email.");
       
-        fetch(`${backendUrl}?authCheck=1&email=${encodeURIComponent(email)}`)
+        showAuthMessage("Checking access...");
+      
+        fetch(`${backendUrl}?authRequest=1&email=${encodeURIComponent(email)}`, { method: "GET" })
           .then(res => res.json())
           .then(data => {
-            emailInput.disabled = true;
-            document.getElementById("nameContainer").style.display = "block";
-            document.getElementById("emailCheckBtn").style.display = "none";
-      
-            if (data.exists) {
-              nameInput.value = data.name || "";
-              nameInput.disabled = true;
-              sendPinAndShowMessage(data.name, email);
+            if (data.success) {
+              document.getElementById("name").value = data.name || "Admin";
+              document.getElementById("email").disabled = true;
+              document.getElementById("emailCheckBtn").style.display = "none";
+              document.getElementById("pinSection").style.display = "block";
+              
+              document.getElementById("pinSection").style.display = "block";
+                setTimeout(() => {
+                  document.getElementById("pin")?.focus();
+                }, 100);
+              
+              
+              showAuthMessage("✅ PIN sent to your email. Please enter it below.");
             } else {
-              nameInput.value = "";
-              nameInput.disabled = false;
-              document.getElementById("toPinButton").style.display = "block";
+              showAuthMessage("❌ " + data.message);
             }
           })
           .catch(() => showAuthMessage("❌ Network error. Try again."));
@@ -367,23 +370,28 @@
       }
     
       function submitPin() {
-        const email = document.getElementById("email").value.trim();
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim().toLowerCase();
         const pin = document.getElementById("pin").value.trim();
-        if (!email || !pin) return showAuthMessage("Please fill all fields.");
-    
+      
+        if (!pin) return showAuthMessage("Enter the PIN sent to your email.");
+      
+        showAuthMessage("Verifying PIN...");
+      
         fetch(`${backendUrl}?authVerify=1&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(pin)}`, { method: "GET" })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              const user = { email: data.email, name: data.name };
-              localStorage.setItem("signedInUser", JSON.stringify(user));
-              closeSignInModal();
+              localStorage.setItem("signedInUser", JSON.stringify({ name: data.name, email }));
+              closeSignInModal();  // ✅ Hide modal on success
               updateSignedInDisplay();
+              addAdminMenuItem?.();
+              startSlotPolling?.();
             } else {
               showAuthMessage("❌ " + data.message);
             }
           })
-          .catch(() => showAuthMessage("❌ Could not verify. Try again."));
+          .catch(() => showAuthMessage("❌ Network error. Try again."));
       }
     
       function updateSignedInDisplay() {
@@ -399,10 +407,6 @@
           if (signOutBtn) signOutBtn.style.display = "none";
           openSignInModal();
         }
-      }
-    
-      function showAuthMessage(msg) {
-        document.getElementById("authMessage").innerText = msg;
       }
 
       function signOut() {
@@ -430,6 +434,27 @@
       document.addEventListener("DOMContentLoaded", () => {
         updateSignedInDisplay();
         resetInactivityTimer();
+      
+        const emailInput = document.getElementById("email");
+        const pinInput = document.getElementById("pin");
+      
+        if (emailInput) {
+          emailInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              document.getElementById("emailCheckBtn")?.click();
+            }
+          });
+        }
+      
+        if (pinInput) {
+          pinInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              submitPin();
+            }
+          });
+        }
       });
     </script>
   </body>
