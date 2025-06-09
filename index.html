@@ -38,7 +38,7 @@
   </head>
   <body>
     <div id="mainContent">
-      <h2>QR Check-In-7</h2>
+      <h2>QR Check-In-8</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <button id="signOutButton" style="display: none; font-size: 13px; margin-top: 6px;" onclick="signOut()">Sign Out</button>
@@ -46,7 +46,7 @@
       <div id="qr-reader"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
         <select id="cameraSelect" onchange="switchCamera()"></select>
-        <button onclick="refreshCameraList()" style="margin-left: 8px; padding: 6px 12px; font-size: 14px;">
+        <button id="refreshCameraBtn" onclick="refreshCameraList()" style="margin-left: 8px; padding: 6px 12px; font-size: 14px;">
           Refresh Camera
         </button>
       </div>
@@ -120,8 +120,12 @@
       window.addEventListener('offline', checkOfflineStatus);
       checkOfflineStatus();
 
+      let cameraLoaded = false;
+
       function startScanner(cameraId) {
         currentCameraId = cameraId;
+        cameraLoaded = false; // Reset flag before trying
+      
         qrReader.start(
           cameraId,
           { fps: 10, qrbox: 250 },
@@ -134,9 +138,13 @@
           (err) => {
             // Silent scan errors
           }
-        ).catch((err) => {
+        ).then(() => {
+          cameraLoaded = true;
+          updateCameraButtonLabel();
+        }).catch((err) => {
           console.warn("Initial scanner start failed, retrying...", err);
-          // Retry once after 1 second
+          
+          // Retry once
           setTimeout(() => {
             qrReader.start(
               cameraId,
@@ -148,11 +156,25 @@
                 });
               },
               (err) => {
-                console.error("Retry scanner start failed", err);
+                // Silent
               }
-            );
+            ).then(() => {
+              cameraLoaded = true;
+              updateCameraButtonLabel();
+            }).catch((retryErr) => {
+              console.error("Retry scanner start failed", retryErr);
+              cameraLoaded = false;
+              updateCameraButtonLabel();
+            });
           }, 1000);
         });
+      }
+
+      function updateCameraButtonLabel() {
+        const btn = document.getElementById("refreshCameraBtn");
+        if (btn) {
+          btn.textContent = cameraLoaded ? "Refresh Camera" : "Load Camera";
+        }
       }
 
       function populateCameraDropdown() {
@@ -376,28 +398,7 @@
         document.getElementById("signInModal").style.display = "none";
         document.body.classList.remove("modal-active");
         document.getElementById("mainContent").style.display = "block"; // Now show scanner
-      
-        // ✅ Initialize camera *after* modal is gone and DOM is stable
-        setTimeout(() => {
-          Html5Qrcode.getCameras().then(devices => {
-            availableCameras = devices;
-            if (devices.length === 0) {
-              document.getElementById("result").innerText = "❌ No camera found.";
-              return;
-            }
-      
-            const backCamera = devices.find(d =>
-              d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("rear")
-            ) || devices[0];
-      
-            populateCameraDropdown();
-            qrReader.clear().then(() => {
-              startScanner(backCamera.id);
-            }).catch(() => {
-              startScanner(backCamera.id); // fallback
-            });
-          });
-        }, 300); // short delay for better device readiness
+  
       }
 
       function showAuthMessage(msg) {
@@ -480,19 +481,6 @@
             }
           })
           .catch(() => showAuthMessage("❌ Network error. Try again."));
-      }
-
-      function initScanner() {
-        Html5Qrcode.getCameras().then(devices => {
-          availableCameras = devices;
-          if (devices.length === 0) {
-            document.getElementById("result").innerText = "❌ No camera found.";
-            return;
-          }
-          const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
-          populateCameraDropdown();
-          startScanner(backCamera.id);
-        });
       }
     
       function updateSignedInDisplay() {
@@ -584,6 +572,6 @@
       });
     </script>
 
-    <script src="app.js?v=20250609-7"></script>
+    <script src="app.js?v=20250609-8"></script>
   </body>
 </html>
