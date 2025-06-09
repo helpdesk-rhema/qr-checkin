@@ -22,6 +22,7 @@
       <select id="cameraSelect" onchange="switchCamera()"></select>
     </div>
     <div id="result">Waiting for scan...</div>
+    <div id="queueHistory" style="margin-top: 10px; font-size: 14px;"></div>
     <div id="offlineBanner" class="offline" style="display: none;">🚫 Offline Mode</div>
     <div id="syncBanner" class="syncing" style="display: none;"></div>
 
@@ -144,16 +145,39 @@
 
       function queueOfflineCheckIn(code) {
         const queue = getOfflineQueue();
+      
+        // 🔒 Prevent duplicate entries
+        if (queue.some(entry => entry.code === code)) return;
+      
         queue.push({ code, timestamp: new Date().toISOString() });
         saveOfflineQueue(queue);
         const count = queue.length;
         document.getElementById("result").innerHTML = `📴 Offline. Queued: ${code} (${count} total)`;
         restartScanner();
+        displayOfflineQueue();
+      }
+
+      function displayOfflineQueue() {
+        const queue = getOfflineQueue();
+        const div = document.getElementById("queueHistory");
+      
+        if (queue.length === 0) {
+          div.innerHTML = "";
+          return;
+        }
+      
+        const list = queue.map((entry, i) =>
+          `${i + 1}. <code>${entry.code}</code> @ ${new Date(entry.timestamp).toLocaleTimeString()}`
+        ).join("<br>");
+      
+        div.innerHTML = `<strong>🕒 Queued Check-Ins:</strong><br>${list}`;
       }
 
       function syncOfflineQueue() {
         const queue = getOfflineQueue();
         if (queue.length === 0) return;
+      
+        if (!confirm(`Sync ${queue.length} queued check-in(s) now?`)) return;
       
         const syncBanner = document.getElementById("syncBanner");
         syncBanner.style.display = "block";
@@ -162,7 +186,7 @@
         const updatedQueue = [];
         let completed = 0;
       
-        queue.forEach((entry, index) => {
+        queue.forEach((entry) => {
           fetch(`${backendUrl}?code=${encodeURIComponent(entry.code)}&action=checkin`)
             .then(res => res.json())
             .then(data => {
@@ -179,13 +203,14 @@
               completed++;
               if (completed === queue.length) {
                 saveOfflineQueue(updatedQueue);
+                displayOfflineQueue(); // Refresh queue history
+      
                 setTimeout(() => {
                   syncBanner.style.display = "none";
       
-                  // ✅ Clear stale offline message if no queue remains
                   if (updatedQueue.length === 0) {
                     document.getElementById("result").innerText = "✅ All pending check-ins synced.";
-                    restartScanner(); // re-ready scanner with clean state
+                    restartScanner();
                   }
                 }, 3000);
               }
