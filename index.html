@@ -315,35 +315,13 @@
 
       Html5Qrcode.getCameras().then(devices => {
         availableCameras = devices;
-      
         if (devices.length === 0) {
           document.getElementById("result").innerText = "❌ No camera found.";
           return;
         }
-      
+        const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
         populateCameraDropdown();
-      
-        const frontCam = devices.find(d => d.label.toLowerCase().includes("front"));
-        const backCam = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
-      
-        if (frontCam && backCam && frontCam.id !== backCam.id) {
-          // Force init cycle: front → stop → back
-          qrReader.start(frontCam.id, { fps: 10, qrbox: 250 }, () => {}, () => {})
-            .then(() => qrReader.stop())
-            .then(() => {
-              currentCameraId = backCam.id;
-              startScanner(backCam.id);
-            })
-            .catch(() => {
-              // Fallback if front fails
-              currentCameraId = backCam.id;
-              startScanner(backCam.id);
-            });
-        } else {
-          // If only one camera or no labels
-          currentCameraId = backCam.id;
-          startScanner(backCam.id);
-        }
+        startScanner(backCamera.id);
       });
 
       function submitManualCode() {
