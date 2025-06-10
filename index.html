@@ -67,7 +67,7 @@
   <body>
     
     <div id="mainContent">
-      <h2>QR Check-In-61</h2>
+      <h2>QR Check-In-62</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
@@ -359,6 +359,8 @@
       });
 
      function refreshCameraList() {
+        location.reload();
+       
         Html5Qrcode.getCameras().then(devices => {
           availableCameras = devices;
       
