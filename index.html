@@ -358,9 +358,59 @@
         //startScanner(backCamera.id);
       });
 
+
+      function refreshCameraList() {
+        alert("ℹ️ If the scanner breaks or doesn’t load, please reload the page using your browser’s refresh button (🔄), then try again.");
+        
+        Html5Qrcode.getCameras().then(devices => {
+          availableCameras = devices;
+      
+          if (devices.length === 0) {
+            document.getElementById("result").innerText = "❌ No camera found.";
+            return;
+          }
+      
+          const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+          currentCameraId = backCamera.id;
+      
+          populateCameraDropdown(); // ✅ Set the dropdown label correctly
+      
+          const restartScanner = () => {
+            qrReader.start(
+              backCamera.id,
+              { fps: 10, qrbox: 250 },
+              (decodedText) => {
+                document.getElementById("result").innerHTML = 🔍 Scanned: ${decodedText};
+      
+                // ✅ Delay stop to prevent frame collapse
+                setTimeout(() => {
+                  qrReader.stop().catch(() => {});
+                }, 1000);
+      
+                processScan(decodedText.trim());
+              },
+              (errorMessage) => {
+                // Optional silent scan error handling
+              }
+            ).catch(err => {
+              console.error("Start scanner failed", err);
+            });
+          };
+      
+          if (qrReader._isScanning) {
+            qrReader.stop().then(restartScanner).catch(() => {
+              console.warn("Stop failed or already stopped");
+              restartScanner();
+            });
+          } else {
+            restartScanner();
+          }
+        });
+      }
+
       
 
-     function refreshCameraList() {
+     function refreshCameraListOLD() {
         alert("ℹ️ If the scanner breaks or doesn’t load, please reload the page using your browser’s refresh button (🔄), then try again.");
       
         Html5Qrcode.getCameras().then(devices => {
