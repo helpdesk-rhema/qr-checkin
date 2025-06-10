@@ -67,7 +67,7 @@
   <body>
     
     <div id="mainContent">
-      <h2>QR Check-In-67</h2>
+      <h2>QR Check-In-100</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
@@ -358,71 +358,50 @@
         //startScanner(backCamera.id);
       });
 
-      function refreshCameraListOLD() {
-        location.reload(); // That’s all
-      }
+      
 
      function refreshCameraList() {
-  console.log("🔄 refreshCameraList triggered...");
-
-  Html5Qrcode.getCameras().then(devices => {
-    console.log(`📷 Cameras found: ${devices.length}`, devices);
-    availableCameras = devices;
-
-    if (devices.length === 0) {
-      document.getElementById("result").innerText = "❌ No camera found.";
-      return;
-    }
-
-    const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
-    currentCameraId = backCamera.id;
-    console.log("📸 Selected camera:", backCamera.label || backCamera.id);
-
-    populateCameraDropdown();
-
-    const restartScanner = () => {
-      console.log("🔁 Attempting to start scanner...");
-      qrReader.start(
-        backCamera.id,
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-          console.log("✅ QR Code Scanned:", decodedText);
-          document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
-
-          setTimeout(() => {
-            console.log("🛑 Stopping scanner after scan...");
-            qrReader.stop().catch(() => {
-              console.warn("⚠️ Failed to stop scanner.");
-            });
-          }, 1000);
-
-          processScan(decodedText.trim());
-        },
-        (errorMessage) => {
-          console.warn("⚠️ Scan error:", errorMessage);
-        }
-      ).catch(err => {
-        console.error("❌ Start scanner failed", err);
-      });
-    };
-
-    if (qrReader._isScanning) {
-      console.log("📡 Scanner is already active — attempting to stop...");
-      qrReader.stop().then(() => {
-        console.log("🛑 Scanner stopped successfully.");
-        restartScanner();
-      }).catch((err) => {
-        console.warn("⚠️ Stop failed or scanner was not running:", err);
-        restartScanner();
-      });
-    } else {
-      console.log("🆕 Scanner not active — starting fresh...");
-      restartScanner();
-    }
-  }).catch(err => {
-    console.error("🚫 Failed to get cameras:", err);
-  });
-}
+        alert("ℹ️ If the scanner breaks or doesn’t load, please reload the page using your browser’s refresh button (🔄), then try again.");
+      
+        Html5Qrcode.getCameras().then(devices => {
+          availableCameras = devices;
+      
+          if (devices.length === 0) {
+            document.getElementById("result").innerText = "❌ No camera found.";
+            return;
+          }
+      
+          const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
+          currentCameraId = backCamera.id;
+      
+          populateCameraDropdown();
+      
+          const restartScanner = () => {
+            qrReader.start(
+              backCamera.id,
+              { fps: 10, qrbox: 250 },
+              (decodedText) => {
+                document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
+      
+                setTimeout(() => {
+                  qrReader.stop().catch(() => {});
+                }, 1000);
+      
+                processScan(decodedText.trim());
+              },
+              () => {} // silent error
+            ).catch(() => {});
+          };
+      
+          if (qrReader._isScanning) {
+            qrReader.stop().then(restartScanner).catch(restartScanner);
+          } else {
+            restartScanner();
+          }
+        }).catch(() => {
+          document.getElementById("result").innerText = "🚫 Unable to access camera.";
+        });
+      }
 
       function submitManualCode() {
         const input = document.getElementById("manualCodeInput");
