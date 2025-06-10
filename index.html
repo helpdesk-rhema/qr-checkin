@@ -67,7 +67,7 @@
   <body>
     
     <div id="mainContent">
-      <h2>QR Check-In-63</h2>
+      <h2>QR Check-In-64</h2>
       <!-- SIGN-IN INDICATOR (DISPLAY WHO IS LOGGED IN) -->
       <div id="signedInUser" style="font-size: 13px; color: green; margin-top: 10px;"></div>
       <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px;">
@@ -382,9 +382,14 @@
               { fps: 10, qrbox: 250 },
               (decodedText) => {
                 document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
-                qrReader.stop().catch(() => {}).finally(() => {
-                  processScan(decodedText.trim());
-                });
+                
+                // Delay stop to prevent frame collapse
+                setTimeout(() => {
+                  qrReader.stop().catch(() => {});
+                }, 1000);
+                
+                processScan(decodedText.trim());
+              });
               },
               () => {}
             ).catch(err => {
