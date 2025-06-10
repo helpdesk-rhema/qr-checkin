@@ -374,7 +374,7 @@
           const backCamera = devices.find(d => d.label.toLowerCase().includes("back")) || devices[0];
           currentCameraId = backCamera.id;
       
-          populateCameraDropdown(); // ✅ Move here so it sets the selected option correctly
+          populateCameraDropdown(); // ✅ Set the dropdown label correctly
       
           const restartScanner = () => {
             qrReader.start(
@@ -382,16 +382,17 @@
               { fps: 10, qrbox: 250 },
               (decodedText) => {
                 document.getElementById("result").innerHTML = `🔍 Scanned: ${decodedText}`;
-                
-                // Delay stop to prevent frame collapse
+      
+                // ✅ Delay stop to prevent frame collapse
                 setTimeout(() => {
                   qrReader.stop().catch(() => {});
                 }, 1000);
-                
+      
                 processScan(decodedText.trim());
-              });
               },
-              () => {}
+              (errorMessage) => {
+                // Optional silent scan error handling
+              }
             ).catch(err => {
               console.error("Start scanner failed", err);
             });
